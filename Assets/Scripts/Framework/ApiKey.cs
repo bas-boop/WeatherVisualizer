@@ -7,7 +7,8 @@ namespace Framework
     {
         public static string LoadApiKey()
         {
-            string path = Path.Combine(Application.streamingAssetsPath, "config.json");
+            string path = Path.Combine(Application.streamingAssetsPath, "Config.json");
+            
             if (File.Exists(path))
             {
                 string json = File.ReadAllText(path);

@@ -24,7 +24,7 @@
     [System.Serializable]
     public class Weather
     {
-        public int id;
+        public int id; // if 7xx do not display description UI
         public string main;
         public string description;
         public string icon;

@@ -2,13 +2,19 @@
 using UnityEngine;
 using UnityEngine.Networking;
 
+using Framework.DebugSystem;
+
 namespace Framework
 {
     public class WeatherManager : MonoBehaviour
     {
+        [SerializeField] private Messenger messenger;
         [SerializeField] private string city = "Zaandam";
         
-        private const string URL = "https://api.openweathermap.org/data/2.5/weather?q={0}&appid={1}&units=metric";
+        public delegate void WeatherDataReceivedHandler(WeatherResponse weatherData);
+        public event WeatherDataReceivedHandler OnWeatherDataReceived;
+        
+        private const string URL = "https://api.openweathermap.org/data/2.5/weather?q={0}&appid={1}&units=metric&lang"; // &lang=nl
 
         private void Start()
         {
@@ -29,12 +35,12 @@ namespace Framework
             if (request.result == UnityWebRequest.Result.Success)
             {
                 WeatherResponse weatherData = JsonUtility.FromJson<WeatherResponse>(request.downloadHandler.text);
-                gameObject.AddComponent<DebugSystem.Messenger>().DebugWeather(weatherData);
+                OnWeatherDataReceived?.Invoke(weatherData);
+                
+                messenger.DebugWeather(weatherData);
             }
             else
                 Debug.LogError("Error fetching weather data: " + request.error);
         }
-        
-        
     }
 }
