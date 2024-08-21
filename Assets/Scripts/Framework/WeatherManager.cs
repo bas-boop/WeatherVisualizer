@@ -16,7 +16,9 @@ namespace Framework
         
         private const string URL = "https://api.openweathermap.org/data/2.5/weather?q={0}&appid={1}&units=metric&lang"; // &lang=nl
 
-        private void Start()
+        private void Start() => StartApi();
+        
+        public void StartApi()
         {
             string key = ApiKey.LoadApiKey();
             
