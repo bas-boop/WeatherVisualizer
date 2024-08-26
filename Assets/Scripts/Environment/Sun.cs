@@ -2,6 +2,7 @@
 using System;
 
 using Framework;
+using UI.Canvas;
 
 namespace Environment
 {
@@ -10,7 +11,8 @@ namespace Environment
         private const float MINUTES = 60;
         
         [Header("References")]
-        [SerializeField] private WeatherManager weatherManager;
+        [SerializeField] private WeatherManager[] weatherManagers;
+        [SerializeField] private ScrollUI scrollUI;
         
         [Header("Light")]
         [SerializeField] private Light sunLight;
@@ -27,40 +29,58 @@ namespace Environment
         [SerializeField] private float sunRise;
         [SerializeField] private float sunSet;
         
-        
         private DateTime _sunriseTime;
         private DateTime _sunsetTime;
         private bool _dataReceived;
+        private int _current;
 
-        private void OnEnable() => weatherManager.OnWeatherDataReceived += SetSun;
+        private void OnEnable() => weatherManagers[0].OnWeatherDataReceived += SetSun;
 
-        private void OnDisable() => weatherManager.OnWeatherDataReceived -= SetSun;
+        private void OnDisable() => weatherManagers[0].OnWeatherDataReceived -= SetSun;
 
         private void Update()
         {
             if (!_dataReceived) 
                 return;
-
-            DateTime currentTime = DateTime.Now;
-            timeProgress = GetTimeProgress(currentTime);
+            
+            int timezoneOffsetInSeconds = weatherManagers[_current].CurrentWeatherData.timezone;
+            DateTime utcNow = DateTime.UtcNow;
+            DateTime currentCityTime = utcNow.AddSeconds(timezoneOffsetInSeconds);
+            timeProgress = GetTimeProgress(currentCityTime);
             
             if (timeProgress is 1 or 0)
-                ChangeLight(currentTime);
+                ChangeLight(currentCityTime);
             
             UpdateSunRotation(timeProgress);
             UpdateSunColorAndIntensity(timeProgress);
         }
 
+        public void SetIndexSun()
+        {
+            if (_current == scrollUI.CurrentPage)
+                return;
+            
+            _current = Math.Abs(scrollUI.CurrentPage);
+            Debug.Log(_current);
+            SetSun(weatherManagers[_current].CurrentWeatherData);
+            
+            int timezoneOffsetInSeconds = weatherManagers[_current].CurrentWeatherData.timezone;
+            DateTime utcNow = DateTime.UtcNow;
+            DateTime currentCityTime = utcNow.AddSeconds(timezoneOffsetInSeconds);
+            ChangeLight(currentCityTime);
+        }
+
         private void SetSun(WeatherResponse weatherData)
         {
-            //todo: check with multiple time zones
-            _sunriseTime = DateTimeOffset.FromUnixTimeSeconds(weatherData.sys.sunrise).DateTime.ToLocalTime();
-            _sunsetTime = DateTimeOffset.FromUnixTimeSeconds(weatherData.sys.sunset).DateTime.ToLocalTime();
-            _sunriseTime = DateTimeOffset.FromUnixTimeSeconds(weatherData.sys.sunrise).DateTime;
-            _sunsetTime = DateTimeOffset.FromUnixTimeSeconds(weatherData.sys.sunset).DateTime;
+            DateTime sunriseUtc = DateTimeOffset.FromUnixTimeSeconds(weatherData.sys.sunrise).UtcDateTime;
+            DateTime sunsetUtc = DateTimeOffset.FromUnixTimeSeconds(weatherData.sys.sunset).UtcDateTime;
 
-            sunRise = _sunriseTime.Hour + _sunriseTime.Minute / MINUTES;
-            sunSet = _sunsetTime.Hour + _sunsetTime.Minute / MINUTES;
+            int timezoneOffsetInSeconds = weatherData.timezone;
+            _sunriseTime = sunriseUtc.AddSeconds(timezoneOffsetInSeconds);
+            _sunsetTime = sunsetUtc.AddSeconds(timezoneOffsetInSeconds);
+            
+            sunRise = _sunriseTime.Hour +  _sunriseTime.Minute / MINUTES;
+            sunSet = _sunsetTime.Hour +  _sunsetTime.Minute / MINUTES;
             
             _dataReceived = true;
         }
@@ -72,17 +92,17 @@ namespace Environment
             return Mathf.Clamp01((float) (timeSinceSunrise.TotalMinutes / totalDaySpan.TotalMinutes));
         }
 
-        private void UpdateSunRotation(float timeProgress)
+        private void UpdateSunRotation(float currentTimeProgress)
         {
-            float sunElevationAngle = Mathf.Lerp(0, 180, timeProgress) - 90;
+            float sunElevationAngle = Mathf.Lerp(0, 180, currentTimeProgress) - 90;
             sunLight.transform.rotation = Quaternion.Euler(new (sunElevationAngle, sunLight.transform.rotation.y, 0));
         }
 
-        private void UpdateSunColorAndIntensity(float timeProgress)
+        private void UpdateSunColorAndIntensity(float currentTimeProgress)
         {
-            sunLight.intensity = sunIntensityCurve.Evaluate(timeProgress);
-            sunLight.color = sunColorGradient.Evaluate(timeProgress);
-            mainCamera.backgroundColor = backgroundColorGradient.Evaluate(timeProgress);
+            sunLight.intensity = sunIntensityCurve.Evaluate(currentTimeProgress);
+            sunLight.color = sunColorGradient.Evaluate(currentTimeProgress);
+            mainCamera.backgroundColor = backgroundColorGradient.Evaluate(currentTimeProgress);
         }
         
         private void ChangeLight(DateTime currentTime)

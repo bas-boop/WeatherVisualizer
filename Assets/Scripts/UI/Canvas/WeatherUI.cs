@@ -49,7 +49,7 @@ namespace UI.Canvas
         {
             if (weatherData.weather is { Length: > 0 })
             {
-                main.text = weatherData.weather[0].main;
+                main.text = weatherData.name + ": " + weatherData.weather[0].main;
                 description.text = weatherData.weather[0].description;
             }
 

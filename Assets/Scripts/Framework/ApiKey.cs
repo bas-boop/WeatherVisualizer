@@ -3,6 +3,12 @@ using UnityEngine;
 
 namespace Framework
 {
+    [System.Serializable]
+    public class ApiConfig
+    {
+        public string openWeatherMapApiKey;
+    }
+    
     public static class ApiKey
     {
         public static string LoadApiKey()
@@ -19,11 +25,5 @@ namespace Framework
             Debug.LogError("Configuration file not found.");
             return null;
         }
-    }
-    
-    [System.Serializable]
-    public class ApiConfig
-    {
-        public string openWeatherMapApiKey;
     }
 }

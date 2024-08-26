@@ -8,13 +8,17 @@ namespace Framework
 {
     public class WeatherManager : MonoBehaviour
     {
+        private const string CITY_API_CALL = "https://api.openweathermap.org/data/2.5/weather?q={0}&appid={1}&units=metric&lang";
+        private const string LOCATION_API_CALL = "https://api.openweathermap.org/data/2.5/weather?lat={0}&lon={1}&appid={2}&units=metric&lang"; // &lang=nl
+        
         [SerializeField] private Messenger messenger;
         [SerializeField] private string city = "Zaandam";
-        
+
+        public WeatherResponse CurrentWeatherData { get; private set; }
+
         public delegate void WeatherDataReceivedHandler(WeatherResponse weatherData);
-        public event WeatherDataReceivedHandler OnWeatherDataReceived;
         
-        private const string URL = "https://api.openweathermap.org/data/2.5/weather?q={0}&appid={1}&units=metric&lang"; // &lang=nl
+        public event WeatherDataReceivedHandler OnWeatherDataReceived;
 
         private void Start() => StartApi();
         
@@ -34,15 +38,28 @@ namespace Framework
             UnityWebRequest request = UnityWebRequest.Get(requestUrl);
             yield return request.SendWebRequest();
             
-            if (request.result == UnityWebRequest.Result.Success)
+            switch (request.result)
             {
-                WeatherResponse weatherData = JsonUtility.FromJson<WeatherResponse>(request.downloadHandler.text);
-                OnWeatherDataReceived?.Invoke(weatherData);
+                case UnityWebRequest.Result.Success:
+                    CurrentWeatherData = JsonUtility.FromJson<WeatherResponse>(request.downloadHandler.text);
+                    OnWeatherDataReceived?.Invoke(CurrentWeatherData);
+                    messenger.DebugWeather(CurrentWeatherData);
+                    break;
                 
-                messenger.DebugWeather(weatherData);
+                // todo: fill switch case
+                case UnityWebRequest.Result.InProgress:
+                    break;
+                case UnityWebRequest.Result.ConnectionError:
+                    break;
+                case UnityWebRequest.Result.ProtocolError:
+                    break;
+                case UnityWebRequest.Result.DataProcessingError:
+                    break;
+                
+                default:
+                    Debug.LogError("Error fetching weather data: " + request.error);
+                    break;
             }
-            else
-                Debug.LogError("Error fetching weather data: " + request.error);
         }
     }
 }
